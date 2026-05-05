@@ -321,7 +321,7 @@
       <p id="cedearPriceSrc" class="text-[10px] text-slate-400 mt-0.5">--</p>
     </div>
     <div>
-      <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Precio EE.UU. (USD)</label>
+      <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Precio NYSE (USD)</label>
       <div class="flex items-center gap-1">
         <input id="usPrice" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-300 rounded-md num">
         <button id="btnFetchUS" title="Fetch live" class="px-2 py-2 bg-slate-100 hover:bg-slate-200 rounded-md text-xs">↻</button>
@@ -337,11 +337,6 @@
       <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Premium/Discount</label>
       <input id="premium" type="text" readonly class="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-md num font-semibold">
       <p class="text-[10px] text-slate-400 mt-0.5">CEDEAR vs NYSE</p>
-    </div>
-    <div>
-      <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Precio Wallbit (USD)</label>
-      <input id="wallbitPriceUSD" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-300 rounded-md num">
-      <p class="text-[10px] text-slate-400 mt-0.5">Usualmente = NYSE</p>
     </div>
   </div>
 </section>
@@ -426,12 +421,6 @@
                 <td class="text-right py-2 pl-2 text-[11px] text-slate-400">+ IVA 21%</td>
               </tr>
               <tr class="border-b border-slate-100">
-                <td class="py-2 pr-2 font-medium">Gold</td>
-                <td class="text-right py-2 px-2 text-emerald-500 font-semibold">0%</td>
-                <td class="text-right py-2 px-2"><input id="cocosGoldAUM" type="number" step="0.01" class="w-20 px-2 py-1 border border-slate-300 rounded num text-right" title="% anual sobre AUM"></td>
-                <td class="text-right py-2 pl-2 text-[11px] text-slate-400">% anual sobre AUM</td>
-              </tr>
-              <tr class="border-b border-slate-100">
                 <td class="py-2 pr-2 font-medium">Pro</td>
                 <td class="text-right py-2 px-2 text-emerald-500 font-semibold">0%</td>
                 <td class="text-right py-2 px-2"><input id="cocosProMonthly" type="number" step="1" class="w-20 px-2 py-1 border border-slate-300 rounded num text-right"></td>
@@ -456,7 +445,7 @@
             <input id="cocosCustodyARS" type="number" step="100" class="w-full px-2 py-1.5 border border-slate-300 rounded num">
           </div>
         </div>
-        <p class="text-[11px] text-slate-400 mt-2">Gold: 0% trading + hasta 0,15% AUM anual (break-even vs Humanas: turnover ≥ 28% cartera/año). Pro: 0% trading + USD 150/mes fijo (break-even vs Gold: saldo ≥ USD 1,2M). Custodia gratis hasta USD 200k de saldo. Operador aplica a call-in por mesa.</p>
+        <p class="text-[11px] text-slate-400 mt-2">Pro: 0% trading + USD 150/mes fijo (USD 1800/año, solo conviene a saldos muy altos o trading muy activo). Custodia gratis hasta USD 200k de saldo. Operador aplica a call-in por mesa. <span class="text-slate-500 italic">El plan Gold (asesoría de fondos / cartera administrada) queda fuera del alcance: no es self-directed sobre tickers elegidos por el cliente.</span></p>
       </div>
 
       <!-- SWIFT bancario (fondeo USD AR → broker) -->
@@ -807,7 +796,7 @@
     <div class="mt-2 space-y-1.5 text-amber-900 text-[11px] leading-relaxed">
       <p>Si abriste el archivo con doble clic (<code>file://</code>), el browser bloquea muchas APIs por CORS. Soluciones:</p>
       <p>1. <b>Servir localmente</b>: abrí terminal en la carpeta del archivo y corré <code>python3 -m http.server 8000</code>, después abrí <code>http://localhost:8000/calculadora_cedear_vs_wallbit.html</code>.</p>
-      <p>2. <b>Input manual</b>: dejá los valores a mano en los campos CEDEAR ARS / Precio EE.UU. — toda la lógica sigue funcionando.</p>
+      <p>2. <b>Input manual</b>: dejá los valores a mano en los campos CEDEAR ARS / Precio NYSE — toda la lógica sigue funcionando.</p>
       <p>3. La app intenta 4 rutas: directa + 3 proxies CORS (corsproxy.io, allorigins, codetabs). Si todas fallan al mismo tiempo, los servicios están caídos.</p>
     </div>
   </details>
@@ -842,7 +831,7 @@ const NON_US_MARKETS = ['B3','BOVESPA','FRANKFURT','XETRA','LONDON STOCK EXCHANG
 const DEFAULTS = {
   market: {
     ccl: 1467, cedearPriceARS: 38380, cedearRatio: 15, cedearTicker: 'TSLA',
-    wallbitPriceUSD: 391.71, usPrice: 391.71,
+    usPrice: 391.71,
     balanzCommission: 0.50, allariaCommission: 0.50,
     balanzCommissionOperador: 1.50, allariaCommissionOperador: 1.50,
     // Wallbit 3 planes
@@ -859,7 +848,6 @@ const DEFAULTS = {
     // Cocos Capital — personas humanas CEDEARs web/app + planes especiales
     cocosCommissionHumanas: 0.45,    // web/app personas humanas (CEDEARs)
     cocosCommissionOperador: 1.00,   // mesa/operador (call-in)
-    cocosGoldAUM: 0.15,              // % anual sobre AUM (plan Gold)
     cocosProMonthly: 150,            // USD/mes fijo (plan Pro)
     cocosCustodyThreshold: 200000,   // saldo USD hasta el cual custodia = 0
     cocosCustodyARS: 1000,           // ARS/mes si saldo entre threshold y +100k
@@ -1150,7 +1138,6 @@ const PORTFOLIO_STRATEGIES = [
   { id: 'balanz',       label: 'Balanz',                color: '#7c3aed' },
   { id: 'allaria',      label: 'Allaria · Autogestión', color: '#0ea5e9' },
   { id: 'cocosHumanas', label: 'Cocos · Humanas',       color: '#f59e0b' },
-  { id: 'cocosGold',    label: 'Cocos · Gold',          color: '#eab308' },
   { id: 'cocosPro',     label: 'Cocos · Pro',           color: '#ca8a04' },
   { id: 'wbClassic',    label: 'Wallbit · Classic',     color: '#3b82f6' },
   { id: 'wbPro',        label: 'Wallbit · Pro',         color: '#1d4ed8' },
@@ -1215,15 +1202,6 @@ function computePortfolioCost(cfg, strategyId) {
     const rate = isOp ? m.cocosCommissionOperador : m.cocosCommissionHumanas;
     commPct = rate * (1 + m.iva/100) + m.bymaDerechos;
     // Custodia: $0 hasta threshold, ARS/mes si saldo entre threshold y +100k
-    if (cfg.capital > m.cocosCustodyThreshold) {
-      custodia = m.cocosCustodyARS * (1 + m.iva/100) * cfg.meses / m.ccl;
-    }
-    divDrag = computeDividendDrag(m, cfg.capital, cfg.meses, m.divFeeCocos);
-  } else if (strategyId === 'cocosGold') {
-    // 0% trading + hasta cocosGoldAUM% anual sobre AUM, prorrateado a meses
-    commPct = 0 + m.bymaDerechos; // BYMA sigue aplicando, lo paga el cliente
-    const aumFeeAnnualUSD = cfg.capital * (m.cocosGoldAUM/100);
-    feeMonthly = aumFeeAnnualUSD / 12;
     if (cfg.capital > m.cocosCustodyThreshold) {
       custodia = m.cocosCustodyARS * (1 + m.iva/100) * cfg.meses / m.ccl;
     }
@@ -1517,14 +1495,14 @@ function renderAll() {
 // BINDINGS
 // ============================================================
 function bindMarketInputs() {
-  const keys = ['ccl','cedearPriceARS','wallbitPriceUSD','usPrice',
+  const keys = ['ccl','cedearPriceARS','usPrice',
     'balanzCommission','allariaCommission',
     'balanzCommissionOperador','allariaCommissionOperador',
     'wallbitCommission','wallbitCommissionPro','wallbitCommissionMax',
     'wallbitFeeClassic','wallbitFeePro','wallbitFeeMax','wallbitCapMax',
     'wallbitAPRClassic','wallbitAPRPro','wallbitAPRMax',
     'cocosCommissionHumanas','cocosCommissionOperador',
-    'cocosGoldAUM','cocosProMonthly','cocosCustodyThreshold','cocosCustodyARS',
+    'cocosProMonthly','cocosCustodyThreshold','cocosCustodyARS',
     'iva','fondeoWallbit','bymaDerechos','allariaCustodiaARS',
     'swiftOurLow','swiftOurHigh','swiftBankPct','swiftBankThreshold',
     'dividendYield','irsWithhold',
@@ -1680,9 +1658,7 @@ async function refreshUSPrice() {
   const r = await fetchUSPrice(usTicker);
   if (r && r.value) {
     state.market.usPrice = r.value;
-    state.market.wallbitPriceUSD = r.value;
     $('usPrice').value = r.value;
-    $('wallbitPriceUSD').value = r.value;
     srcEl.textContent = r.src + ' ✓';
     srcEl.className = 'text-[10px] text-emerald-600';
   } else {
