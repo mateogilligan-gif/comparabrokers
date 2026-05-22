@@ -2,17 +2,71 @@ import { NextResponse } from 'next/server'
 
 /**
  * Price API route — server-side fetcher para esquivar CORS.
- * Estrategia: race entre Stooq y Yahoo, gana el primero. Si ambos fallan, 404.
  *
- * IMPORTANTE: NO usamos fallback prices hardcodeados. Inventar precios genera
- * cálculos de premium/discount erróneos contra el ratio×CCL real. Mejor fallar
- * limpio y dejar que la UI muestre "no data" para que el usuario meta el valor a mano.
+ * Estrategia:
+ * 1. data912.com como fuente primaria (mejor cobertura para BYMA y US)
+ * 2. Stooq como fallback (.ar para BYMA, .us para US)
+ * 3. Yahoo Finance como fallback adicional para US tickers
+ *
+ * Si todas las fuentes fallan → 404 limpio para que la UI muestre "no data"
+ * y permita input manual.
  */
 
+interface PriceResult {
+  value: number
+  src: string
+  time: string
+}
+
 // ------------------------------------------------------------
-// Stooq — CSV simple, sin auth. Formato: us=AAPL.us, byma=aapl.ar
+// data912.com — fuente primaria. Devuelve el array entero de CEDEARs/stocks.
+// Filtramos por ticker en memoria.
 // ------------------------------------------------------------
-async function fetchStooq(symbol: string) {
+async function fetchData912(market: 'ar' | 'us', ticker: string): Promise<PriceResult | null> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 4000)
+
+    const endpoint = market === 'ar'
+      ? 'https://data912.com/live/arg_cedears'
+      : 'https://data912.com/live/usa_stocks'
+
+    const r = await fetch(endpoint, {
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+    })
+    clearTimeout(timeoutId)
+
+    if (!r.ok) return null
+    const data: unknown = await r.json()
+    if (!Array.isArray(data)) return null
+
+    const upper = ticker.toUpperCase()
+    const entry = data.find((x: any) => {
+      const sym = (x?.symbol || x?.ticker || '').toString().toUpperCase()
+      return sym === upper
+    }) as any
+
+    if (!entry) return null
+    const price = entry.c ?? entry.close ?? entry.price ?? entry.last
+    const num = typeof price === 'number' ? price : parseFloat(price)
+    if (!isFinite(num) || num <= 0) return null
+
+    return {
+      value: num,
+      src: `data912 ${market === 'ar' ? 'BYMA' : 'US'}`,
+      time: new Date().toISOString(),
+    }
+  } catch {
+    return null
+  }
+}
+
+// ------------------------------------------------------------
+// Stooq — CSV simple, fallback secundario
+// ------------------------------------------------------------
+async function fetchStooq(symbol: string): Promise<PriceResult | null> {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 4000)
@@ -26,10 +80,8 @@ async function fetchStooq(symbol: string) {
     const lines = csv.trim().split('\n')
     if (lines.length < 2) return null
     const cols = lines[1].split(',')
-    // cols: symbol, date, time, open, high, low, close, volume
     const close = parseFloat(cols[6])
     if (!close || isNaN(close)) return null
-    // Stooq devuelve "N/D" cuando no tiene data
     if (cols[6].toUpperCase().includes('N/D')) return null
     return { value: close, src: `stooq ${symbol}`, time: `${cols[1]} ${cols[2]}` }
   } catch {
@@ -38,9 +90,9 @@ async function fetchStooq(symbol: string) {
 }
 
 // ------------------------------------------------------------
-// Yahoo Finance — solo US tickers, usa el endpoint chart v8
+// Yahoo Finance — solo US tickers, fallback adicional
 // ------------------------------------------------------------
-async function fetchYahoo(symbol: string) {
+async function fetchYahoo(symbol: string): Promise<PriceResult | null> {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 4000)
@@ -70,44 +122,44 @@ async function fetchYahoo(symbol: string) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const ticker = searchParams.get('ticker')?.toUpperCase()
-  const market = searchParams.get('market') || 'us'
+  const market = (searchParams.get('market') || 'us') as 'us' | 'ar'
 
   if (!ticker) {
     return NextResponse.json({ error: 'Missing ticker parameter' }, { status: 400 })
   }
+  if (market !== 'ar' && market !== 'us') {
+    return NextResponse.json({ error: 'Invalid market — use ar or us' }, { status: 400 })
+  }
 
-  // Sanitizar — Stooq quiere ticker base sin .us / .ar
   const baseTicker = ticker.replace(/\..*$/, '').toUpperCase()
 
-  // Para BYMA usamos sufijo .ar, para US el ticker pelado (Yahoo) y .us (Stooq)
+  // 1) Primero data912 — mejor cobertura para BYMA y US
+  const d912 = await fetchData912(market, baseTicker)
+  if (d912) {
+    return NextResponse.json(d912)
+  }
+
+  // 2) Fallback: Stooq + (Yahoo solo para US), race
   const stooqSymbol = market === 'ar'
     ? `${baseTicker.toLowerCase()}.ar`
     : `${baseTicker.toLowerCase()}.us`
 
-  // Race: primero el que responda con data válida
-  const candidates: Promise<{ value: number; src: string; time: string } | null>[] = [
-    fetchStooq(stooqSymbol),
-  ]
-
-  // Yahoo solo para US (no soporta tickers BYMA)
+  const candidates: Promise<PriceResult | null>[] = [fetchStooq(stooqSymbol)]
   if (market === 'us') {
     candidates.push(fetchYahoo(baseTicker))
   }
 
-  // Timeout global de seguridad
   const timeoutPromise: Promise<null> = new Promise((resolve) =>
     setTimeout(() => resolve(null), 5000),
   )
 
-  // Promise.any espera al primero que resuelva con un valor truthy
-  // Si todos fallan o devuelven null, caemos al timeout
-  let liveResult: { value: number; src: string; time: string } | null = null
+  let liveResult: PriceResult | null = null
   try {
-    const results = await Promise.race([
+    const result = await Promise.race([
       Promise.all(candidates).then(arr => arr.find(r => r && r.value > 0) || null),
       timeoutPromise,
     ])
-    liveResult = results || null
+    liveResult = result || null
   } catch {
     liveResult = null
   }
@@ -116,7 +168,7 @@ export async function GET(request: Request) {
     return NextResponse.json(liveResult)
   }
 
-  // No fallback — fail clean. UI debe mostrar "no data" y permitir input manual.
+  // No fallback hardcodeado — fail clean, la UI muestra "no data" y permite input manual.
   return NextResponse.json(
     { error: 'No live data available', ticker: baseTicker, market },
     { status: 404 },
