@@ -89,7 +89,7 @@ export const DEFAULT_MARKET: MarketParams = {
   comafiTier1Max: 20000,
   comafiTier2Max: 80000,
   divFeeAllaria: 2.00,
-  divFeeBalanz: 2.00,
+  divFeeBalanz: 0.35,
   divFeeCocos: 0.25,
 }
 
@@ -228,7 +228,8 @@ export function computePortfolioCost(cfg: PortfolioConfig, strategyId: string, m
     divDrag = computeDividendDrag(market, cfg.capital, cfg.meses, market.divFeeCocos)
   } else if (strategyId === 'cocosPro') {
     commPct = 0 + market.bymaDerechos
-    feeMonthly = market.cocosProMonthly
+    // Cocos Pro abono USD 150/mes + IVA (tarifario oficial confirma "precios no incluyen IVA")
+    feeMonthly = market.cocosProMonthly * (1 + market.iva / 100)
     if (cfg.capital > market.cocosCustodyThreshold) {
       custodia = market.cocosCustodyARS * (1 + market.iva / 100) * cfg.meses / market.ccl
     }
