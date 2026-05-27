@@ -92,7 +92,7 @@ const COST_DATA: { categories: Category[]; brokers: { name: string; color: strin
         },
         {
           label: 'Abono mensual (plan)',
-          values: ['$0', '$0', '$0', 'USD 150', '$0', 'USD 9,99', 'USD 19,99'],
+          values: ['$0', '$0', '$0', 'desde USD 150 + IVA', '$0', 'USD 9,99', 'USD 19,99'],
           styles: ['good', 'good', 'good', 'bad', 'good', 'neut', 'neut'],
         },
       ],
@@ -101,22 +101,27 @@ const COST_DATA: { categories: Category[]; brokers: { name: string; color: strin
       name: 'Ingreso y egreso de fondos',
       rows: [
         {
-          label: 'Fondeo USD AR vía SWIFT',
-          values: ['N/A', 'N/A', 'N/A', 'N/A', 'OUR 24,20 + 0,21%', 'OUR 24,20 + 0,21%', 'OUR 24,20 + 0,21%'],
-          styles: ['hide', 'hide', 'hide', 'hide', 'bad', 'bad', 'bad'],
+          label: 'Fondeo USD local',
+          values: ['transferencia gratis', 'transferencia gratis', 'transferencia gratis', 'transferencia gratis', 'no aplica', 'no aplica', 'no aplica'],
+          styles: ['good', 'good', 'good', 'good', 'hide', 'hide', 'hide'],
         },
         {
-          label: 'Fondeo ARS local (legacy)',
+          label: 'Fondeo USD desde exterior (cable entrante)',
+          values: ['gratis', 'según plaza', 'USD 10', 'USD 10', 'OUR 24,20 + 0,21%', 'OUR 24,20 + 0,21%', 'OUR 24,20 + 0,21%'],
+          styles: ['good', 'neut', 'bad', 'bad', 'bad', 'bad', 'bad'],
+        },
+        {
+          label: 'Fondeo ARS local',
           values: ['gratis', 'gratis', 'gratis', 'gratis', '4,5%', '4,5%', '4,5%'],
           styles: ['good', 'good', 'good', 'good', 'bad', 'bad', 'bad'],
         },
         {
           label: 'Spread cambiario al comprar',
-          values: ['CCL implícito', 'CCL implícito', 'CCL implícito', 'CCL implícito', 'precio USD real', 'precio USD real', 'precio USD real'],
+          values: ['precio CEDEAR (CCL+spread)', 'precio CEDEAR (CCL+spread)', 'precio CEDEAR (CCL+spread)', 'precio CEDEAR (CCL+spread)', 'precio NYSE real', 'precio NYSE real', 'precio NYSE real'],
           styles: ['neut', 'neut', 'neut', 'neut', 'good', 'good', 'good'],
         },
         {
-          label: 'Retiro USD (cable)',
+          label: 'Retiro USD (cable saliente)',
           values: ['USD 10 + IVA', 'según plaza', 'gratis', 'gratis', 'gratis', 'gratis', 'gratis'],
           styles: ['bad', 'neut', 'good', 'good', 'good', 'good', 'good'],
         },
@@ -136,9 +141,14 @@ const COST_DATA: { categories: Category[]; brokers: { name: string; color: strin
       name: 'Alternativa: comprar acción en exterior directa',
       rows: [
         {
-          label: 'Por ALyC (asistida, no autogestión)',
-          values: ['1,50% + IVA · mín USD 10', '1,50% + IVA · mín USD 10', '1,00% + IVA · mín USD 10', 'no aplica', 'incluido', 'incluido', 'incluido'],
-          styles: ['bad', 'bad', 'bad', 'hide', 'good', 'good', 'good'],
+          label: 'Mesa asistida',
+          values: ['1,50% + IVA', '1,50% + IVA · mín USD 10', '1% + IVA', '1% + IVA', 'incluido', 'incluido', 'incluido'],
+          styles: ['bad', 'bad', 'bad', 'bad', 'good', 'good', 'good'],
+        },
+        {
+          label: 'Mandato exterior (autogestión)',
+          values: ['0,50% + IVA', 'no documentado', '0,20% + IVA', '0,20% + IVA', 'no aplica', 'no aplica', 'no aplica'],
+          styles: ['neut', 'hide', 'good', 'good', 'hide', 'hide', 'hide'],
         },
       ],
     },
@@ -178,7 +188,7 @@ export function HiddenCostsTable() {
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
           Todos los cargos, abonos, spreads y fees — los obvios y los que no aparecen hasta que llega la liquidación.
-          Fuente: PDF oficial Allaria (Abr-2026), tarifario oficial Balanz (2025), condiciones públicas Cocos y Wallbit.
+          Fuente: PDF oficial Allaria, tarifario oficial Balanz (balanz.com/comisiones), tarifario oficial Cocos Capital (cocos.capital/tarifario) y condiciones públicas Wallbit. ‡Balanz documenta sólo "mandato exterior" sin distinguir modalidad asistida vs autogestión.
         </p>
       </CardHeader>
 
